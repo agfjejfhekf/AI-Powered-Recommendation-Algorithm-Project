@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>充电站导航</title>
+<script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=337a2bbe6549ff106b0e939f2c44affa"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+#map{width:100vw;height:100vh;}
+#controlPanel{position:fixed;top:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:10px;}
+.nav-btn{width:120px;height:44px;border:none;border-radius:8px;color:white;font-size:14px;cursor:pointer;}
+#startNav{background:#02a67d;}
+#stopNav{background:#ef4444;display:none;}
+#morePanel{position:fixed;top:120px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;}
+#moreBtn{width:120px;height:40px;border:none;border-radius:8px;background:#5856d6;color:white;font-size:14px;cursor:pointer;}
+#otherStations{width:280px;background:#fff;border-radius:8px;padding:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1);display:none;max-height:300px;overflow-y:auto;}
+#otherTip{font-size:12px;color:#666;margin-bottom:8px;line-height:1.4;}
+.other-item{padding:8px;border-bottom:1px solid #eee;font-size:13px;cursor:pointer;color:#333;}
+.other-item:last-child{border-bottom:none;}
+.other-item:hover{color:#02a67d;background:#f8f9fa;}
+#infoTip{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#5856d6;color:white;padding:10px 20px;border-radius:8px;z-index:1000;font-size:14px;display:none;max-width:80%;text-align:center;}
+.user-marker{width:22px;height:22px;background:#ff3333;border-radius:50%;border:3px solid #fff;margin-left:-11px;margin-top:-11px;animation:pulse 1.2s infinite alternate;}
+.nav-arrow{width:24px;height:24px;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='red' d='M12 2L4 12h5v8h6v-8h5z'/></svg>");background-size:cover;margin-left:-12px;margin-top:-24px;}
+.target-marker{width:20px;height:20px;background:#00c88c;border-radius:50%;border:3px solid #fff;margin-left:-10px;margin-top:-10px;animation:bounce 1.5s infinite;}
+.normal-marker{width:16px;height:16px;background:#3388ff;border-radius:50%;border:2px solid #fff;margin-left:-8px;margin-top:-8px;}
+@keyframes pulse{0%{transform:scale(1);opacity:1;}100%{transform:scale(1.5);opacity:0.7;}}
+@keyframes bounce{0%{transform:translateY(0);}50%{transform:translateY(-8px);}100%{transform:translateY(0);}}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="infoTip"></div>
+<div id="controlPanel"><button class="nav-btn" id="startNav">开始导航</button><button class="nav-btn" id="stopNav">取消导航</button></div>
+<div id="morePanel"><button id="moreBtn">更多推荐</button><div id="otherStations"><div id="otherTip">以下站点为近似匹配</div><div id="otherList"></div></div></div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const sid = params.get("sid");
+const selectedIdx = parseInt(params.get("sel") || 0);
+const userLat = parseFloat(params.get("ulat") || 31.86);
+const userLng = parseFloat(params.get("ulng") || 117.28);
+
+let map, userMarker, watchId = null;
+let allStations = [];
+let data = { stations: [], other_stations: [], all_recommend_stations: [] };
+
+function showTip(text) {
+    const t = document.getElementById('infoTip');
+    t.textContent = text;
+    t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 3000);
+}
+
+window.onload = async function () {
+    if (sid) {
+        try {
+            const res = await fetch(`/api/get-map-data/${sid}`);
+            data = await res.json();
+        } catch (e) {}
+    }
+
+    allStations = data.all_recommend_stations || [...data.stations, ...data.other_stations];
+    map = new AMap.Map('map', { zoom: 17, center: [userLng, userLat], resizeEnable: true });
+    
+    userMarker = new AMap.Marker({
+        position: [userLng, userLat],
+        content: (() => { const d = document.createElement('div'); d.className = 'user-marker'; return d; })(),
+        zIndex: 1000
+    });
+    userMarker.addTo(map);
+
+    renderStations();
+    initNav();
+    initMoreBtn();
+};
+
+function renderStations() {
+    if (!allStations.length) return;
+    allStations.forEach((st, i) => {
+        if (!st.lng || !st.lat) return;
+        const dom = document.createElement('div');
+        dom.className = i === selectedIdx ? 'target-marker' : 'normal-marker';
+        const marker = new AMap.Marker({ position: [st.lng, st.lat], content: dom });
+        marker.addTo(map);
+        const info = new AMap.InfoWindow({
+            content: `<div style="padding:12px;min-width:240px;line-height:1.7;"><strong>${st.name}</strong><br>距离：${st.distance}km<br>地址：${st.address}<br>评分：${st.score}分<br>电话：${st.phone || '无'}</div>`,
+            offset: new AMap.Pixel(0, -25)
+        });
+        marker.on('click', () => info.open(map, marker.getPosition()));
+        if (i === selectedIdx) info.open(map, marker.getPosition());
+    });
+}
+
+function initNav() {
+    document.getElementById('startNav').onclick = function () {
+        this.style.display = 'none';
+        document.getElementById('stopNav').style.display = 'block';
+        watchId = navigator.geolocation.watchPosition(p => {
+            userMarker.setPosition([p.coords.longitude, p.coords.latitude]);
+        }, () => showTip("定位异常"), { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
+    };
+    document.getElementById('stopNav').onclick = function () {
+        this.style.display = 'none';
+        document.getElementById('startNav').style.display = 'block';
+        if (watchId) navigator.geolocation.clearWatch(watchId);
+    };
+}
+
+function initMoreBtn() {
+    const btn = document.getElementById('moreBtn');
+    const panel = document.getElementById('otherStations');
+    const list = document.getElementById('otherList');
+    if (allStations.length <= 1) { btn.style.display = 'none'; return; }
+    btn.onclick = function () {
+        panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+        if (panel.style.display !== 'block') return;
+        list.innerHTML = '';
+        allStations.forEach((st, idx) => {
+            if (idx === selectedIdx) return;
+            const item = document.createElement('div');
+            item.className = 'other-item';
+            item.innerHTML = `<strong>${st.name}</strong><br>距离：${st.distance}km`;
+            item.onclick = () => {
+                location.href = `?sid=${sid}&sel=${idx}&ulat=${userLat}&ulng=${userLng}`;
+            };
+            list.appendChild(item);
+        });
+    };
+    document.addEventListener('click', e => {
+        if (!panel.contains(e.target) && e.target !== btn) panel.style.display = 'none';
+    });
+}
+
+window.onbeforeunload = () => { if (watchId) navigator.geolocation.clearWatch(watchId); };
+</script>
+</body>
+</html>

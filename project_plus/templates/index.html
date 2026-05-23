@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新能源汽车AI助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', 'Heiti SC', sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px 0;
+        }
+        
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #2E86AB 0%, #1A5366 100%);
+            color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+        
+        .header-desc {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        
+        .tab-container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        
+        .tabs {
+            display: flex;
+            background-color: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .tab {
+            padding: 18px 30px;
+            cursor: pointer;
+            font-size: 1.15rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            flex: 1;
+            text-align: center;
+        }
+        
+        .tab.active {
+            border-bottom: 3px solid #2E86AB;
+            color: #2E86AB;
+            background-color: white;
+            box-shadow: 0 -2px 8px rgba(46, 134, 171, 0.1);
+        }
+        
+        .tab:hover:not(.active) {
+            background-color: #f0f4f8;
+            color: #1E6B8C;
+        }
+        
+        .tab-content {
+            padding: 30px;
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .input-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+            font-size: 1.1rem;
+            color: #2d3748;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 15px 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 140px;
+            transition: all 0.3s ease;
+            background-color: #fafbfc;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #2E86AB;
+            box-shadow: 0 0 0 3px rgba(46, 134, 171, 0.1);
+            background-color: white;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        button {
+            background-color: #2E86AB;
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            font-size: 1.05rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            background-color: #1E6B8C;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(46, 134, 171, 0.2);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button.secondary {
+            background-color: #f0f4f8;
+            color: #2d3748;
+            border: 1px solid #e2e8f0;
+        }
+        
+        button.secondary:hover {
+            background-color: #e6edf5;
+            color: #1E6B8C;
+        }
+        
+        .result-box {
+            margin-top: 25px;
+            padding: 25px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            min-height: 200px;
+            white-space: pre-line;
+            font-size: 1rem;
+            color: #2d3748;
+            line-height: 1.8;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+            overflow-x: hidden;
+            overflow-y: auto;
+            max-height: 600px;
+        }
+        
+        .result-box.loading {
+            background-color: #f0f4f8;
+            color: #64748b;
+            position: relative;
+        }
+        
+        .result-box.loading::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 4px solid #cbd5e1;
+            border-top-color: #2E86AB;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        
+        .location-info {
+            margin-top: 15px;
+            font-size: 0.95rem;
+            color: #64748b;
+            padding: 12px 18px;
+            background-color: #f0f4f8;
+            border-radius: 6px;
+            border-left: 4px solid #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .location-info.updated {
+            border-left-color: #22c55e;
+            color: #065f44;
+            background-color: #f0fdf4;
+        }
+        
+        .tip-box {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff8e6;
+            border-left: 4px solid #f59e0b;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            color: #7c2d12;
+        }
+        
+        .tip-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .example-list {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+        
+        .example-list li {
+            margin-bottom: 5px;
+        }
+        
+        .station-item {
+            margin: 12px 0;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .station-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+        
+        .station-radio {
+            transform: scale(1.3);
+            cursor: pointer;
+        }
+        
+        .map-action-btn {
+            background: #059669 !important;
+            width: 100%;
+            margin-top: 20px;
+            padding: 14px !important;
+            font-size: 16px !important;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            .tab {
+                padding: 15px 10px;
+                font-size: 1rem;
+            }
+            .tab-content {
+                padding: 20px 15px;
+            }
+            .btn-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+            button {
+                padding: 12px 20px;
+                width: 100%;
+            }
+            .result-box {
+                padding: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>新能源汽车AI助手</h1>
+            <p class="header-desc">学生怎么能说不行队，为您提供个性化新能源汽车推荐和精准充电站匹配服务</p>
+        </header>
+        
+        <div class="tab-container">
+            <div class="tabs">
+                <div class="tab active" data-tab="car">汽车推荐</div>
+                <div class="tab" data-tab="station">充电站推荐</div>
+            </div>
+            
+            <div class="tab-content active" id="car-content">
+                <div class="input-group">
+                    <label for="car-input">请描述您的购车需求：</label>
+                    <textarea id="car-input" placeholder="例如：预算20万左右，主要家用，需要续航500公里以上，空间大一点"></textarea>
+                </div>
+                
+                <div class="tip-box">
+                    <div class="tip-title">推荐需求描述示例：</div>
+                    <ul class="example-list">
+                        <li>预算15-20万，家用，需要大空间和长续航</li>
+                        <li>每天通勤80公里，预算12万左右，要经济实惠</li>
+                        <li>经常跑长途，需要快充快、续航600km以上的车型</li>
+                    </ul>
+                </div>
+                
+                <div class="btn-group">
+                    <button id="car-btn">生成推荐</button>
+                    <button id="car-clear" class="secondary">清空输入</button>
+                </div>
+                
+                <div class="result-box" id="car-result">
+                    <div style="text-align:center; margin-top:60px;">
+                        <p>请输入您的购车需求，点击"生成推荐"获取个性化建议</p>
+                        <p style="margin-top:10px; font-size:0.9rem;">AI将分析您的需求，推荐最匹配的新能源汽车</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="station-content">
+                <div class="input-group">
+                    <label for="station-input">请描述您的充电需求：</label>
+                    <textarea id="station-input" placeholder="例如：找5公里内便宜的快充站，最好有休息区"></textarea>
+                </div>
+                
+                <div class="location-info" id="location-info">
+                    <span>正在获取您的位置...（当前使用默认位置：合肥市）</span>
+                </div>
+                
+                <div class="tip-box">
+                    <div class="tip-title">推荐需求描述示例：</div>
+                    <ul class="example-list">
+                        <li>找10公里内价格便宜的快充站，有休息区</li>
+                        <li>需要评分4.5以上、环境好的充电站</li>
+                        <li>紧急情况，要最近的快充站</li>
+                    </ul>
+                </div>
+                
+                <div class="btn-group">
+                    <button id="station-btn">生成推荐</button>
+                    <button id="station-location" class="secondary">更新位置</button>
+                    <button id="station-clear" class="secondary">清空输入</button>
+                </div>
+                
+                <div class="result-box" id="station-result">
+                    <div style="text-align:center; margin-top:60px;"><p>请输入您的充电需求，点击"生成推荐"获取附近充电站</p></div>
+                </div>
+            </div>
+        </div>
+        
+        <footer style="text-align:center; margin-top:40px; color:#64748b; font-size:0.9rem;">
+            <p>新能源汽车AI助手 © 2026 | 基于火山引擎豆包AI开发</p>
+            <p style="margin-top:5px;">数据更新时间：2026年 | 充电站数据共1707个，覆盖9个行政区</p>
+        </footer>
+    </div>
+
+    <script>
+        let userLatitude = 31.86;
+        let userLongitude = 117.28;
+        window.stationData = null;
+
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab + '-content').classList.add('active');
+            });
+        });
+
+        window.onload = async function() {
+            try {
+                const res = await fetch('/api/get-location');
+                const data = await res.json();
+                userLatitude = data.latitude;
+                userLongitude = data.longitude;
+                document.getElementById('location-info').innerHTML = `<span>当前位置：${data.city}（${userLatitude.toFixed(4)}, ${userLongitude.toFixed(4)}）</span>`;
+            } catch (e) {}
+        };
+
+        async function getBrowserLocation() {
+            return new Promise((resolve, reject) => {
+                if (!navigator.geolocation) reject("浏览器不支持定位");
+                navigator.geolocation.getCurrentPosition(p => resolve({lat:p.coords.latitude,lng:p.coords.longitude}),e=>reject("获取定位失败"));
+            });
+        }
+
+        document.getElementById('car-btn').addEventListener('click', async () => {
+            const input = document.getElementById('car-input').value.trim();
+            const box = document.getElementById('car-result');
+            if (!input) return alert("请输入购车需求");
+            box.classList.add('loading');
+            const res = await fetch('/api/recommend-car', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_input: input })
+            });
+            const data = await res.json();
+            box.classList.remove('loading');
+            box.textContent = data.success ? data.recommendation : data.message;
+        });
+
+        document.getElementById('car-clear').onclick = () => {
+            document.getElementById('car-input').value = '';
+            document.getElementById('car-result').innerHTML = `<div style="text-align:center; margin-top:60px;"><p>请输入购车需求</p></div>`;
+        };
+
+        document.getElementById('station-btn').addEventListener('click', async () => {
+            const input = document.getElementById('station-input').value.trim();
+            const box = document.getElementById('station-result');
+            if (!input) return alert("请输入充电需求");
+            box.classList.add('loading');
+            box.innerHTML = "";
+            try {
+                const res = await fetch('/api/recommend-station-map', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_input: input, latitude: userLatitude, longitude: userLongitude })
+                });
+                const data = await res.json();
+                box.classList.remove('loading');
+                if (!data.success) { box.innerText = data.msg; return; }
+                window.stationData = data;
+                let html = "选择充电站查看地图（推荐的充电站可能没有完全匹配您的要求，请谅解）\n";
+                data.stations.forEach((s,i)=>{
+                    html+=`
+                    <div class="station-item">
+                        <label class="station-label">
+                            <input type="radio" name="selStation" value="${i}" class="station-radio">
+                            <div><strong>${i+1}. ${s.name}</strong><br>距离：${s.distance}km | 评分：${s.score}<br>地址：${s.address}</div>
+                        </label>
+                    </div>`;
+                });
+                html+=`<button class="map-action-btn" id="openMapBtn">🗺️ 打开地图</button>`;
+                box.innerHTML = html;
+
+                document.getElementById('openMapBtn').onclick = async () => {
+                    const sel = document.querySelector('input[name="selStation"]:checked');
+                    if (!sel) return alert("请选择充电站");
+                    const idx = sel.value;
+                    const resp = await fetch("/api/save-map-data", {
+                        method: "POST", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(data)
+                    });
+                    const { sid } = await resp.json();
+                    const url = `/map?sid=${sid}&sel=${idx}&ulat=${userLatitude}&ulng=${userLongitude}`;
+                    window.open(url, "_blank");
+                };
+
+            } catch(e) {
+                box.classList.remove('loading');
+                box.innerText = "服务异常";
+            }
+        });
+
+        document.getElementById('station-location').onclick = async () => {
+            const info = document.getElementById('location-info');
+            info.innerHTML = "<span>获取位置中...</span>";
+            try {
+                const pos = await getBrowserLocation();
+                userLatitude = pos.lat;
+                userLongitude = pos.lng;
+                info.innerHTML = `<span>已更新：${userLatitude.toFixed(4)}, ${userLongitude.toFixed(4)}</span>`;
+                info.classList.add('updated');
+                setTimeout(()=>info.classList.remove('updated'),2500);
+            } catch(e) {
+                info.innerHTML = `<span>获取失败，使用默认位置</span>`;
+            }
+        };
+
+        document.getElementById('station-clear').onclick = () => {
+            document.getElementById('station-input').value = '';
+            document.getElementById('station-result').innerHTML = `<div style="text-align:center; margin-top:60px;"><p>请输入充电需求</p></div>`;
+        };
+    </script>
+</body>
+</html>
